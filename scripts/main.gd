@@ -49,6 +49,14 @@ func _build_world() -> void:
 	ground.material_override = grass
 	ground.position.y = -0.08
 	add_child(ground)
+	var ground_body := StaticBody3D.new()
+	var ground_collision := CollisionShape3D.new()
+	var ground_shape := BoxShape3D.new()
+	ground_shape.size = Vector3(120, 0.2, 120)
+	ground_collision.shape = ground_shape
+	ground_collision.position.y = -0.1
+	ground_body.add_child(ground_collision)
+	add_child(ground_body)
 
 	_add_box(Vector3(0, 0.01, 0), Vector3(10, 0.12, 100), Color(0.18, 0.19, 0.21), false)
 	_add_box(Vector3(0, 0.02, -8), Vector3(100, 0.12, 8), Color(0.22, 0.23, 0.24), false)
