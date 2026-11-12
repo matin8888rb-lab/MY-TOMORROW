@@ -25,6 +25,8 @@ jobs:
 
       - name: Install Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0 ndk;23.2.8568313 cmake;3.10.2.4988404'
 
       - name: Extract Godot project
         run: |
@@ -80,6 +82,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MY-TOMORROW-Android-APK
-          path: build/Android/MY_TOMORROW.apk
+          path: source/MY_TOMORROW_Prototype_1_0/build/MY_TOMORROW.apk
           if-no-files-found: error
           retention-days: 14
