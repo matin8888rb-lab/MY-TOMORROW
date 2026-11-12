@@ -6,6 +6,9 @@ var status_label: Label
 var quest_label: Label
 var vc: int = 40
 var quest_done: bool = false
+var has_job: bool = false
+var worked_today: bool = false
+var job_label: Label
 var hint_label: Label
 var needs_label: Label
 var hunger: float = 100.0
@@ -47,14 +50,6 @@ func _process(delta: float) -> void:
 	_update_sun()
 	player.set("move_speed", maxf(2.5, 5.2 * (0.45 + energy / 180.0)))
 	_update_hint()
-
-func _process(_delta: float) -> void:
-	if player == null:
-		return
-	if not quest_done and player.global_position.distance_to(Vector3(0, 0, -18)) < 9.0:
-		hint_label.text = "نزدیک تالار شهر هستی؛ دکمه تعامل را بزن"
-	else:
-		hint_label.text = "با دکمه‌های لمسی حرکت کن و شهر را بگرد"
 
 func _build_world() -> void:
 	var world_env := WorldEnvironment.new()
@@ -101,6 +96,7 @@ func _build_world() -> void:
 	_add_building("کافه", Vector3(18, 0, -10), Vector3(8, 4, 7), Color(0.62, 0.42, 0.31))
 	_add_building("فروشگاه", Vector3(-18, 0, 12), Vector3(9, 4, 8), Color(0.55, 0.61, 0.48))
 	_add_building("خانه", Vector3(18, 0, 14), Vector3(9, 5, 9), Color(0.72, 0.53, 0.43))
+	_add_building("مرکز کاریابی", Vector3(0, 0, 30), Vector3(10, 4.5, 8), Color(0.55, 0.62, 0.69))
 
 	for x in [-28.0, -12.0, 13.0, 29.0]:
 		for z in [-28.0, 4.0, 29.0]:
@@ -215,6 +211,12 @@ func _build_hud() -> void:
 	needs_label.add_theme_color_override("font_color", Color(0.83, 0.94, 0.91))
 	root.add_child(needs_label)
 
+	job_label = Label.new()
+	job_label.position = Vector2(24, 108)
+	job_label.add_theme_font_size_override("font_size", 17)
+	job_label.add_theme_color_override("font_color", Color(0.77, 0.88, 1.0))
+	root.add_child(job_label)
+
 	quest_label = Label.new()
 	quest_label.position = Vector2(24, 78)
 	quest_label.add_theme_font_size_override("font_size", 18)
@@ -296,10 +298,27 @@ func _nearest_place() -> String:
 		return "shop"
 	if p.distance_to(Vector3(-18, 0, -12)) < 10.0:
 		return "library"
+	if p.distance_to(Vector3(0, 0, 30)) < 10.0:
+		return "employment"
 	return ""
 
 func _interact() -> void:
 	match _nearest_place():
+		"employment":
+			if not has_job:
+				has_job = true
+				hint_label.text = "استخدام شدی! شغل تو کمک‌کار فروشگاه است. از فردا شیفت بگیر."
+			elif worked_today:
+				hint_label.text = "شیفت امروزت را انجام داده‌ای؛ فردا دوباره بیا."
+			elif energy < 25.0 or hunger < 20.0:
+				hint_label.text = "برای شروع شیفت به انرژی ۲۵٪ و گرسنگی ۲۰٪ نیاز داری."
+			else:
+				worked_today = true
+				vc += 18
+				energy = maxf(0.0, energy - 20.0)
+				hunger = maxf(0.0, hunger - 12.0)
+				minute_of_day = fmod(minute_of_day + 180.0, 1440.0)
+				hint_label.text = "شیفت ۳ ساعته تمام شد؛ ۱۸ VC دستمزد گرفتی."
 		"town_hall":
 			if not quest_done:
 				quest_done = true
@@ -318,6 +337,7 @@ func _interact() -> void:
 			energy = 100.0
 			hunger = maxf(25.0, hunger)
 			day_number += 1
+			worked_today = false
 			minute_of_day = 480.0
 			hint_label.text = "استراحت کردی؛ روز تازه‌ای در والورا آغاز شد."
 		"shop":
@@ -344,6 +364,7 @@ func _update_hint() -> void:
 		"home": hint_label.text = "خانه: استراحت و شروع روز بعد"
 		"shop": hint_label.text = "فروشگاه: خرید خوراکی (۴ VC)"
 		"library": hint_label.text = "کتابخانه: مطالعه و بازیابی انرژی"
+		"employment": hint_label.text = "مرکز کاریابی: استخدام یا انجام شیفت روزانه"
 		_: hint_label.text = "شهر را بگرد و ساختمان‌ها را پیدا کن"
 
 func _update_hud() -> void:
@@ -353,6 +374,7 @@ func _update_hud() -> void:
 	var minute := int(minute_of_day) % 60
 	status_label.text = "VALORA  |  روز %d  |  %02d:%02d  |  %d VC" % [day_number, hour, minute, vc]
 	needs_label.text = "گرسنگی: %d%%    انرژی: %d%%" % [int(hunger), int(energy)]
+	job_label.text = "شغل: کمک‌کار فروشگاه" if has_job else "شغل: بیکار"
 	quest_label.text = "مأموریت: به تالار شهر برو" if not quest_done else "مأموریت اول: تکمیل شد  ✓"
 
 func _update_sun() -> void:
@@ -367,7 +389,7 @@ func _save_game() -> void:
 	var position_data := [0.0, 1.1, 12.0]
 	if is_instance_valid(player):
 		position_data = [player.position.x, player.position.y, player.position.z]
-	var data := {"version": 2, "vc": vc, "quest_done": quest_done, "hunger": hunger, "energy": energy, "day": day_number, "minute": minute_of_day, "player_position": position_data}
+	var data := {"version": 3, "vc": vc, "quest_done": quest_done, "hunger": hunger, "energy": energy, "day": day_number, "minute": minute_of_day, "has_job": has_job, "worked_today": worked_today, "player_position": position_data}
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file != null:
 		file.store_string(JSON.stringify(data))
@@ -384,6 +406,8 @@ func _load_game() -> void:
 	var data: Dictionary = parsed
 	vc = clampi(int(data.get("vc", 40)), 0, 999999)
 	quest_done = bool(data.get("quest_done", false))
+	has_job = bool(data.get("has_job", false))
+	worked_today = bool(data.get("worked_today", false))
 	hunger = clampf(float(data.get("hunger", 100.0)), 0.0, 100.0)
 	energy = clampf(float(data.get("energy", 100.0)), 0.0, 100.0)
 	day_number = maxi(1, int(data.get("day", 1)))
