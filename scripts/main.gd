@@ -2,6 +2,7 @@ extends Node3D
 
 const PlayerController = preload("res://scripts/player.gd")
 const VisualUpgrade = preload("res://scripts/visual_upgrade.gd")
+const PlayerVisual = preload("res://scripts/player_visual.gd")
 var player: CharacterBody3D
 var status_label: Label
 var quest_label: Label
@@ -168,15 +169,10 @@ func _build_player() -> void:
 	player.name = "Player"
 	player.set_script(PlayerController)
 	player.position = saved_position if has_saved_position else Vector3(0, 1.1, 12)
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 0.42
-	capsule.height = 1.8
-	var visual := MeshInstance3D.new()
-	visual.mesh = capsule
-	var suit := StandardMaterial3D.new()
-	suit.albedo_color = Color(0.22, 0.45, 0.72)
-	visual.material_override = suit
+	var visual := Node3D.new()
+	visual.name = "Visual"
 	visual.position.y = 0.9
+	visual.set_script(PlayerVisual)
 	player.add_child(visual)
 
 	var collision := CollisionShape3D.new()
