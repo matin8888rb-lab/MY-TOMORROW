@@ -7,12 +7,46 @@ var quest_label: Label
 var vc: int = 40
 var quest_done: bool = false
 var hint_label: Label
+var needs_label: Label
+var hunger: float = 100.0
+var energy: float = 100.0
+var day_number: int = 1
+var minute_of_day: float = 480.0
+var needs_tick: float = 0.0
+var autosave_tick: float = 0.0
+var has_saved_position: bool = false
+var saved_position: Vector3 = Vector3(0, 1.1, 12)
+const SAVE_PATH := "user://valora_save.json"
 
 func _ready() -> void:
+	_load_game()
 	_build_world()
 	_build_player()
 	_build_hud()
 	_update_hud()
+	_update_sun()
+
+func _process(delta: float) -> void:
+	if player == null:
+		return
+	minute_of_day += delta * 2.0
+	if minute_of_day >= 1440.0:
+		minute_of_day -= 1440.0
+		day_number += 1
+		_save_game()
+	needs_tick += delta
+	if needs_tick >= 30.0:
+		needs_tick = 0.0
+		hunger = maxf(0.0, hunger - 1.0)
+		energy = maxf(0.0, energy - (1.5 if hunger <= 0.0 else 0.7))
+		_update_hud()
+	autosave_tick += delta
+	if autosave_tick >= 20.0:
+		autosave_tick = 0.0
+		_save_game()
+	_update_sun()
+	player.set("move_speed", maxf(2.5, 5.2 * (0.45 + energy / 180.0)))
+	_update_hint()
 
 func _process(_delta: float) -> void:
 	if player == null:
@@ -135,7 +169,7 @@ func _build_player() -> void:
 	player = CharacterBody3D.new()
 	player.name = "Player"
 	player.set_script(PlayerController)
-	player.position = Vector3(0, 1.1, 12)
+	player.position = saved_position if has_saved_position else Vector3(0, 1.1, 12)
 	var capsule := CapsuleMesh.new()
 	capsule.radius = 0.42
 	capsule.height = 1.8
@@ -175,8 +209,14 @@ func _build_hud() -> void:
 	status_label.add_theme_color_override("font_color", Color(0.95, 0.97, 1))
 	root.add_child(status_label)
 
+	needs_label = Label.new()
+	needs_label.position = Vector2(24, 48)
+	needs_label.add_theme_font_size_override("font_size", 18)
+	needs_label.add_theme_color_override("font_color", Color(0.83, 0.94, 0.91))
+	root.add_child(needs_label)
+
 	quest_label = Label.new()
-	quest_label.position = Vector2(24, 56)
+	quest_label.position = Vector2(24, 78)
 	quest_label.add_theme_font_size_override("font_size", 18)
 	quest_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.58))
 	root.add_child(quest_label)
@@ -244,18 +284,115 @@ func _release_action(action: String) -> void:
 	if action != "interact":
 		Input.action_release(action)
 
+func _nearest_place() -> String:
+	var p := player.global_position
+	if p.distance_to(Vector3(0, 0, -18)) < 10.0:
+		return "town_hall"
+	if p.distance_to(Vector3(18, 0, -10)) < 10.0:
+		return "cafe"
+	if p.distance_to(Vector3(18, 0, 14)) < 10.0:
+		return "home"
+	if p.distance_to(Vector3(-18, 0, 12)) < 10.0:
+		return "shop"
+	if p.distance_to(Vector3(-18, 0, -12)) < 10.0:
+		return "library"
+	return ""
+
 func _interact() -> void:
-	if quest_done:
-		hint_label.text = "فعلاً مأموریت دیگری در دسترس نیست."
+	match _nearest_place():
+		"town_hall":
+			if not quest_done:
+				quest_done = true
+				vc += 12
+				hint_label.text = "مأموریت کامل شد! ۱۲ VC دریافت کردی."
+			else:
+				hint_label.text = "کار اداری امروزت تمام شده است."
+		"cafe":
+			if vc >= 5:
+				vc -= 5
+				hunger = minf(100.0, hunger + 38.0)
+				hint_label.text = "یک وعده غذا خوردی؛ ۵ VC پرداخت شد."
+			else:
+				hint_label.text = "برای خرید غذا به ۵ VC نیاز داری."
+		"home":
+			energy = 100.0
+			hunger = maxf(25.0, hunger)
+			day_number += 1
+			minute_of_day = 480.0
+			hint_label.text = "استراحت کردی؛ روز تازه‌ای در والورا آغاز شد."
+		"shop":
+			if vc >= 4:
+				vc -= 4
+				hunger = minf(100.0, hunger + 25.0)
+				hint_label.text = "خوراکی خریدی؛ ۴ VC پرداخت شد."
+			else:
+				hint_label.text = "برای خرید خوراکی به ۴ VC نیاز داری."
+		"library":
+			energy = minf(100.0, energy + 5.0)
+			hint_label.text = "کمی مطالعه کردی و ۵ انرژی به دست آوردی."
+		_:
+			hint_label.text = "به یکی از ساختمان‌ها نزدیک شو و تعامل را بزن."
+	_update_hud()
+	_save_game()
+
+func _update_hint() -> void:
+	if not is_instance_valid(hint_label):
 		return
-	if player.global_position.distance_to(Vector3(0, 0, -18)) < 9.0:
-		quest_done = true
-		vc += 12
-		_update_hud()
-		hint_label.text = "مأموریت کامل شد! ۱۲ VC دریافت کردی."
-	else:
-		hint_label.text = "برای انجام مأموریت به تالار شهر برو."
+	match _nearest_place():
+		"town_hall": hint_label.text = "تالار شهر: تعامل برای مأموریت"
+		"cafe": hint_label.text = "کافه: غذا بخور (۵ VC)"
+		"home": hint_label.text = "خانه: استراحت و شروع روز بعد"
+		"shop": hint_label.text = "فروشگاه: خرید خوراکی (۴ VC)"
+		"library": hint_label.text = "کتابخانه: مطالعه و بازیابی انرژی"
+		_: hint_label.text = "شهر را بگرد و ساختمان‌ها را پیدا کن"
 
 func _update_hud() -> void:
-	status_label.text = "VALORA  |  روز ۱  |  %d VC" % vc
-	quest_label.text = "مأموریت: به تالار شهر برو و با آن تعامل کن" if not quest_done else "مأموریت روز اول: تکمیل شد  ✓"
+	if not is_instance_valid(status_label):
+		return
+	var hour := int(minute_of_day) / 60
+	var minute := int(minute_of_day) % 60
+	status_label.text = "VALORA  |  روز %d  |  %02d:%02d  |  %d VC" % [day_number, hour, minute, vc]
+	needs_label.text = "گرسنگی: %d%%    انرژی: %d%%" % [int(hunger), int(energy)]
+	quest_label.text = "مأموریت: به تالار شهر برو" if not quest_done else "مأموریت اول: تکمیل شد  ✓"
+
+func _update_sun() -> void:
+	var light := get_node_or_null("DirectionalLight3D") as DirectionalLight3D
+	if light == null:
+		return
+	var angle := minute_of_day / 1440.0 * TAU
+	light.rotation_degrees.x = -15.0 - sin(angle - PI / 2.0) * 55.0
+	light.light_energy = 0.18 + maxf(0.0, sin(angle - PI / 2.0))
+
+func _save_game() -> void:
+	var position_data := [0.0, 1.1, 12.0]
+	if is_instance_valid(player):
+		position_data = [player.position.x, player.position.y, player.position.z]
+	var data := {"version": 2, "vc": vc, "quest_done": quest_done, "hunger": hunger, "energy": energy, "day": day_number, "minute": minute_of_day, "player_position": position_data}
+	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify(data))
+
+func _load_game() -> void:
+	if not FileAccess.file_exists(SAVE_PATH):
+		return
+	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	if not parsed is Dictionary:
+		return
+	var data: Dictionary = parsed
+	vc = clampi(int(data.get("vc", 40)), 0, 999999)
+	quest_done = bool(data.get("quest_done", false))
+	hunger = clampf(float(data.get("hunger", 100.0)), 0.0, 100.0)
+	energy = clampf(float(data.get("energy", 100.0)), 0.0, 100.0)
+	day_number = maxi(1, int(data.get("day", 1)))
+	minute_of_day = clampf(float(data.get("minute", 480.0)), 0.0, 1439.9)
+	var pos: Variant = data.get("player_position", [])
+	if pos is Array and pos.size() == 3:
+		saved_position = Vector3(float(pos[0]), float(pos[1]), float(pos[2]))
+		has_saved_position = true
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+		_save_game()
