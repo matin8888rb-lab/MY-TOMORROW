@@ -43,8 +43,17 @@ Every push to `main` or pull request runs the workflow in `.github/workflows/and
 - `scenes/main.tscn` — main scene
 - `scripts/main.gd` — town, HUD, daily needs, economy, interactions, save/load and first quest
 - `scripts/player.gd` — player movement
+- `scripts/player_visual.gd` — lightweight animated human character built from mobile-friendly meshes
+- `scripts/visual_upgrade.gd` — town facades, windows, street furniture, sidewalks, crosswalks, greenery and atmosphere
 - `export_presets.cfg` — Android export configuration
 
 ## Status and verification
 
 This is the clean-source foundation. The first GitHub Actions run is the authoritative check for GDScript parsing and Android export. Do not treat an APK as ready until the workflow has completed and the artifact has been downloaded and installed on a device.
+
+
+## Visual upgrade
+
+The current visual pass adds a warmer procedural sky, distance fog, more detailed building facades, window frames, doors, canopies, road markings, sidewalks, street lamps, benches and greenery. The capsule placeholder has been replaced by a lightweight stylized character with a procedural walk/run cycle. These assets use native Godot meshes and materials to remain compatible with the existing Godot 4.3 GL Compatibility renderer and offline Android target.
+
+PINOC assets were also generated/collected for later experiments. PINOC's `.vsplat` Gaussian-splat character format requires the Viggle Splat Engine and is not directly renderable by this project's current Godot renderer, so it is not loaded into the game yet.
