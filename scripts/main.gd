@@ -349,7 +349,7 @@ func _update_hint() -> void:
 func _update_hud() -> void:
 	if not is_instance_valid(status_label):
 		return
-	var hour := int(minute_of_day) / 60
+	var hour := int(minute_of_day / 60.0)
 	var minute := int(minute_of_day) % 60
 	status_label.text = "VALORA  |  روز %d  |  %02d:%02d  |  %d VC" % [day_number, hour, minute, vc]
 	needs_label.text = "گرسنگی: %d%%    انرژی: %d%%" % [int(hunger), int(energy)]
