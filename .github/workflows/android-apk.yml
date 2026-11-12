@@ -80,6 +80,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MY-TOMORROW-Android-APK
-          path: source/MY_TOMORROW_Prototype_1_0/build/MY_TOMORROW.apk
+          path: build/Android/MY_TOMORROW.apk
           if-no-files-found: error
           retention-days: 14
