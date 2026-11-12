@@ -19,7 +19,7 @@ Explore town → meet people and discover opportunities → work or complete tas
 - Interact to complete one objective and earn 12 VC.
 - The scene provides clear HUD feedback.
 
-## Expansion sequence
+## Daily-life milestone (0.2.0)\n- A running clock and day counter with daylight variation.\n- Hunger and energy meters that gradually decline.\n- Food purchases at the cafe and shop using VC.\n- Resting at home restores energy and advances the day.\n- Studying at the library restores a small amount of energy.\n- Local autosave and load for player position, VC, needs, time and quest completion.\n\n## Expansion sequence
 1. Reliable Android build and touch controls.
 2. Character creator and persistent save/load.
 3. Daily needs, rest and first home.
