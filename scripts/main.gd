@@ -1,6 +1,7 @@
 extends Node3D
 
 const PlayerController = preload("res://scripts/player.gd")
+const VisualUpgrade = preload("res://scripts/visual_upgrade.gd")
 var player: CharacterBody3D
 var status_label: Label
 var quest_label: Label
@@ -24,6 +25,7 @@ const SAVE_PATH := "user://valora_save.json"
 func _ready() -> void:
 	_load_game()
 	_build_world()
+	VisualUpgrade.apply(self)
 	_build_player()
 	_build_hud()
 	_update_hud()
