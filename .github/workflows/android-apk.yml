@@ -64,7 +64,14 @@ jobs:
           version/name="1.0"
           package/unique_name="org.mytomorrow.valora"
           package/name="MY TOMORROW"
-          package/signed=false
+          package/signed=true
+          package/app_category=2
+          keystore/debug="/home/runner/.android/debug.keystore"
+          keystore/debug_user="androiddebugkey"
+          keystore/debug_password="android"
+          keystore/release=""
+          keystore/release_user=""
+          keystore/release_password=""
           screen/immersive_mode=true
           EOF
 
